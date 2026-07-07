@@ -1,0 +1,26 @@
+name: Block raw data files
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  block-raw-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail if data files are tracked
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          blocked="$(
+            git ls-files data | grep -Ev '^data/(README\.md|\.gitignore)$' || true
+          )"
+
+          if [[ -n "$blocked" ]]; then
+            echo "Raw data under data/ must not be tracked:"
+            echo "$blocked"
+            exit 1
+          fi

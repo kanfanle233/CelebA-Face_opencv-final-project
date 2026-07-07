@@ -9,7 +9,13 @@ from torch.utils.data import DataLoader
 from torchvision import transforms as T
 from tqdm import tqdm
 
-from celeba_utils import load_celeba_full_df, load_image, align_face_by_eyes
+from celeba_utils import (
+    MODEL_PATH,
+    EVAL_RESULTS_DIR,
+    load_celeba_full_df,
+    load_image,
+    align_face_by_eyes,
+)
 from train import CelebAFaceDataset, SimpleCNN   # 直接复用 Dataset 和 模型结构
 
 
@@ -80,9 +86,11 @@ def visualize_predictions(model, device, test_df, target_attrs, num_samples=12):
             plt.title(title, fontsize=10)
 
     plt.tight_layout()
-    plt.savefig("test_visualization.png", dpi=200)
+    EVAL_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    output_path = EVAL_RESULTS_DIR / "test_visualization.png"
+    plt.savefig(output_path, dpi=200)
     plt.show()
-    print("可视化结果已保存到 test_visualization.png")
+    print(f"可视化结果已保存到 {output_path}")
 
 
 def main():
@@ -116,9 +124,12 @@ def main():
     num_classes = len(target_attrs)
     model = SimpleCNN(num_classes).to(device)
 
-    state_dict = torch.load("best_model.pth", map_location=device)
+    if not MODEL_PATH.exists():
+        raise FileNotFoundError(f"未找到模型文件: {MODEL_PATH}")
+
+    state_dict = torch.load(MODEL_PATH, map_location=device)
     model.load_state_dict(state_dict)
-    print("已加载 best_model.pth")
+    print(f"已加载 {MODEL_PATH}")
 
     criterion = torch.nn.BCEWithLogitsLoss()
 

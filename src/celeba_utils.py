@@ -9,12 +9,16 @@ import pandas as pd
 import cv2
 from pathlib import Path
 
-# ========== 1. 路径配置（相对 qimo 目录） ==========
-# 本文件在 qimo/daima/ 下，所以 parents[1] 是 qimo/
+# ========== 1. 路径配置 ==========
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DATA_ROOT = PROJECT_ROOT / "archive"
+DATA_ROOT = PROJECT_ROOT / "data" / "archive"
+MODELS_DIR = PROJECT_ROOT / "models"
+RESULTS_DIR = PROJECT_ROOT / "results"
+TRAIN_RESULTS_DIR = RESULTS_DIR / "training"
+EVAL_RESULTS_DIR = RESULTS_DIR / "evaluation"
+MODEL_PATH = MODELS_DIR / "best_model.pth"
 
-IMG_DIR   = DATA_ROOT / "img_align_celeba"
+IMG_DIR = DATA_ROOT / "img_align_celeba"
 ATTR_PATH = DATA_ROOT / "list_attr_celeba.csv"
 BBOX_PATH = DATA_ROOT / "list_bbox_celeba.csv"
 LAND_PATH = DATA_ROOT / "list_landmarks_align_celeba.csv"

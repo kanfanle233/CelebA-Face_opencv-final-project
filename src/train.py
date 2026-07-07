@@ -2,7 +2,6 @@
 import cv2
 import numpy as np
 from PIL import Image
-import os
 import matplotlib.pyplot as plt
 
 import torch
@@ -11,7 +10,13 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms as T
 from tqdm import tqdm
 
-from celeba_utils import load_celeba_full_df, load_image, align_face_by_eyes
+from celeba_utils import (
+    MODEL_PATH,
+    TRAIN_RESULTS_DIR,
+    load_celeba_full_df,
+    load_image,
+    align_face_by_eyes,
+)
 
 
 # ========== 2. Dataset 类定义（放在全局没问题） ==========
@@ -97,6 +102,9 @@ class SimpleCNN(nn.Module):
 
 # ========== 主逻辑封装到 main() 里，避免 Windows 多进程报错 ==========
 def main():
+    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    TRAIN_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
     # 0. 设备
     assert torch.cuda.is_available(), "没有检测到 CUDA，请检查 RTX 4060 驱动"
     device = torch.device("cuda:0")
@@ -172,10 +180,10 @@ def main():
 
     # 6. 如果存在 best_model.pth，就在它基础上继续训
     best_acc = 0.0
-    if os.path.exists("best_model.pth"):
-        state_dict = torch.load("best_model.pth", map_location=device)
+    if MODEL_PATH.exists():
+        state_dict = torch.load(MODEL_PATH, map_location=device)
         model.load_state_dict(state_dict)
-        print("✅ 检测到 best_model.pth，已加载权重，在此基础上继续训练。")
+        print(f"检测到 {MODEL_PATH}，已加载权重，在此基础上继续训练。")
 
         # 可选：继续训练时把学习率稍微调低一点（比如 /2）
         for g in optimizer.param_groups:
@@ -190,7 +198,8 @@ def main():
         print("未找到 best_model.pth，将从随机初始化开始训练。")
 
     # 7. 训练循环
-    EPOCHS = 8  # 这里是“继续训练”的 epoch 数，比如再训 8 轮
+    EPOCHS = 32
+
     history = {
         "train_loss": [],
         "val_loss": [],
@@ -231,8 +240,8 @@ def main():
         avg_acc = float(val_acc_attr.mean())
         if avg_acc > best_acc:
             best_acc = avg_acc
-            torch.save(model.state_dict(), "best_model.pth")
-            print(f"💾 更新并保存新的 best_model.pth, 平均 acc = {best_acc:.4f}")
+            torch.save(model.state_dict(), MODEL_PATH)
+            print(f"更新并保存新的 {MODEL_PATH}, 平均 acc = {best_acc:.4f}")
 
         acc_str = ", ".join([f"{n}={a:.3f}" for n, a in zip(target_attrs, val_acc_attr)])
         print(f"\n[Epoch {epoch}/{EPOCHS}] "
@@ -254,7 +263,8 @@ def main():
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
-    plt.savefig("loss_curve.png", dpi=200)
+    loss_curve_path = TRAIN_RESULTS_DIR / "loss_curve.png"
+    plt.savefig(loss_curve_path, dpi=200)
     plt.show()
 
     # 每个属性的准确率曲线
@@ -267,10 +277,11 @@ def main():
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
-    plt.savefig("acc_curve.png", dpi=200)
+    acc_curve_path = TRAIN_RESULTS_DIR / "acc_curve.png"
+    plt.savefig(acc_curve_path, dpi=200)
     plt.show()
 
-    print("损失曲线已保存为 loss_curve.png，准确率曲线已保存为 acc_curve.png")
+    print(f"损失曲线已保存为 {loss_curve_path}，准确率曲线已保存为 {acc_curve_path}")
 
 
 

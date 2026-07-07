@@ -1,35 +1,19 @@
-# === CelebA images (do NOT upload) ===
-data/archive/img_align_celeba/
-
-# === Annotation files (optional upload) ===
-# data/archive/*.csv  # <- you CAN upload CSV if needed, but usually skip
-
-# === Model weights ===
-models/
-*.pth
-
-# === Python cache ===
-__pycache__/
-*.pyc
-.ipynb_checkpoints/
-
-# === Jupyter notebooks autosave ===
-*.ipynb_checkpoints
-
-# === Virtual environments ===
-venv/
-env/
-.venv/
-
-# === IDE ===
-.vscode/
-.idea/
-
-# === Archives ===
-*.zip
-*.tar.gz
-*.7z
-
-# === OS files ===
 .DS_Store
-Thumbs.db
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+*.log
+
+# Large local artifacts
+archive/
+
+# Raw datasets stay local. Only data/README.md and data/.gitignore may be tracked.
+data/**
+!data/
+!data/README.md
+!data/.gitignore
+models/*.pth
+lightning_logs/
+
+# Generated reports
+results/**/*.csv

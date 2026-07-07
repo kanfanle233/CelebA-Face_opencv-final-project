@@ -1,0 +1,34 @@
+#!/bin/sh
+set -eu
+
+zero_sha=0000000000000000000000000000000000000000
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$local_sha" = "$zero_sha" ]; then
+    continue
+  fi
+
+  if [ "$remote_sha" = "$zero_sha" ]; then
+    range="$local_sha"
+  else
+    range="$remote_sha..$local_sha"
+  fi
+
+  blocked_paths=$(
+    git diff --name-only --diff-filter=ACMR "$range" | while IFS= read -r path; do
+      if [ "$path" = "data/README.md" ] || [ "$path" = "data/.gitignore" ]; then
+        continue
+      fi
+
+      if [ "${path#data/}" != "$path" ]; then
+        printf '%s\n' "$path"
+      fi
+    done
+  )
+
+  if [ -n "$blocked_paths" ]; then
+    printf '%s\n' "Blocked: raw data under data/ must not be pushed."
+    printf '%s\n' "$blocked_paths"
+    exit 1
+  fi
+done

@@ -1,11 +1,9 @@
 # visible.py
-import os
 import random
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import cv2
-from PIL import Image
 import matplotlib
 matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei']
 matplotlib.rcParams['axes.unicode_minus'] = False
@@ -19,7 +17,13 @@ from torchvision import transforms as T
 from sklearn.metrics import confusion_matrix, classification_report
 
 # Import your project code
-from celeba_utils import load_celeba_full_df, load_image, align_face_by_eyes
+from celeba_utils import (
+    MODEL_PATH,
+    EVAL_RESULTS_DIR,
+    load_celeba_full_df,
+    load_image,
+    align_face_by_eyes,
+)
 from train import CelebAFaceDataset, SimpleCNN
 
 
@@ -28,6 +32,7 @@ from train import CelebAFaceDataset, SimpleCNN
 # ============================================================
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("Using device:", device)
+EVAL_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ============================================================
@@ -51,10 +56,13 @@ test_loader = DataLoader(test_dataset, batch_size=256, shuffle=False)
 # 2. Load model
 # ============================================================
 model = SimpleCNN(num_classes=2).to(device)
-state_dict = torch.load("best_model.pth", map_location=device)
+if not MODEL_PATH.exists():
+    raise FileNotFoundError(f"未找到模型文件: {MODEL_PATH}")
+
+state_dict = torch.load(MODEL_PATH, map_location=device)
 model.load_state_dict(state_dict)
 model.eval()
-print("Loaded best_model.pth")
+print(f"Loaded {MODEL_PATH}")
 
 
 # ============================================================
@@ -92,6 +100,44 @@ for i, attr in enumerate(target_attrs):
     print(f"\n=== {attr} ===")
     print(classification_report(all_labels[:, i], all_preds[:, i], digits=4))
 
+# ============================================================
+# 4.5 Metrics summary table (Accuracy / Precision / Recall / F1)
+# ============================================================
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+import pandas as pd
+
+rows = []
+for i, attr in enumerate(target_attrs):
+    y_true = all_labels[:, i]
+    y_pred = all_preds[:, i]
+
+    acc = accuracy_score(y_true, y_pred)
+
+    # binary classification: take positive class (label=1) metrics
+    p, r, f1, _ = precision_recall_fscore_support(
+        y_true, y_pred,
+        average="binary",
+        pos_label=1,
+        zero_division=0
+    )
+
+    rows.append({
+        "Attribute": attr,
+        "Accuracy": acc,
+        "Precision": p,
+        "Recall": r,
+        "F1-score": f1
+    })
+
+metrics_df = pd.DataFrame(rows)
+
+print("\n================ Metrics Summary (per attribute) ================")
+print(metrics_df.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
+
+# 保存为 CSV，方便你直接贴到论文表格里
+metrics_path = EVAL_RESULTS_DIR / "metrics_summary.csv"
+metrics_df.to_csv(metrics_path, index=False, float_format="%.6f")
+print(f"Metrics summary saved as {metrics_path}")
 
 # ============================================================
 # 5. Confusion matrix (per attribute)
@@ -107,9 +153,10 @@ for i, attr in enumerate(target_attrs):
     axes[i].set_ylabel("True")
 
 plt.tight_layout()
-plt.savefig("confusion_matrix.png", dpi=200)
+confusion_matrix_path = EVAL_RESULTS_DIR / "confusion_matrix.png"
+plt.savefig(confusion_matrix_path, dpi=200)
 plt.show()
-print("Confusion matrix saved as confusion_matrix.png")
+print(f"Confusion matrix saved as {confusion_matrix_path}")
 
 
 # ============================================================
@@ -139,9 +186,10 @@ for i, idx in enumerate(sample_correct):
     plt.title(f"✓ Correct\nGT: {gt}\nPred: {pred}", fontsize=9)
 
 plt.tight_layout()
-plt.savefig("correct_samples.png", dpi=200)
+correct_samples_path = EVAL_RESULTS_DIR / "correct_samples.png"
+plt.savefig(correct_samples_path, dpi=200)
 plt.show()
-print("Correct samples saved as correct_samples.png")
+print(f"Correct samples saved as {correct_samples_path}")
 
 
 # ============================================================
@@ -170,6 +218,7 @@ else:
         plt.title(f"❌ Wrong\nGT: {gt}\nPred: {pred}", fontsize=9)
 
     plt.tight_layout()
-    plt.savefig("wrong_samples.png", dpi=200)
+    wrong_samples_path = EVAL_RESULTS_DIR / "wrong_samples.png"
+    plt.savefig(wrong_samples_path, dpi=200)
     plt.show()
-    print("Wrong samples saved as wrong_samples.png")
+    print(f"Wrong samples saved as {wrong_samples_path}")

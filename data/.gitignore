@@ -1,0 +1,4 @@
+# Keep raw datasets local.
+*
+!README.md
+!.gitignore
